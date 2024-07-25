@@ -14,6 +14,7 @@ import time
 
 # Initialize Server Socket
 sel = selectors.DefaultSelector()
+# !!! Set your PC Ethernet IP address to the host address below
 host, port = '192.168.1.1', 10000
 
 class Kaw2FFFControl:
