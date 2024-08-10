@@ -1,0 +1,9 @@
+# Generated during the tests
+ram_utils/test/testWriteYamlFile.yaml
+
+# Blender backup files
+*.blend1
+
+# Zip files
+*.zip
+

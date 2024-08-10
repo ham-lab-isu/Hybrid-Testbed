@@ -1,0 +1,64 @@
+image: victorlamoine/ros_vtk8_sphinx_latexpdf:melodic
+
+before_script:
+  - apt update >/dev/null && apt install -y git >/dev/null
+  - git clone https://gitlab.com/VictorLamoine/ros_gitlab_ci.git
+  - source ros_gitlab_ci/gitlab-ci.bash >/dev/null
+
+cache:
+  paths:
+    - ccache/
+
+catkin lint:
+  stage: build
+  image: ros:melodic-ros-core
+  before_script:
+    - apt update >/dev/null && apt install -y git >/dev/null
+    - git clone https://gitlab.com/VictorLamoine/ros_gitlab_ci.git
+    - source ros_gitlab_ci/gitlab-ci.bash >/dev/null
+    - cd src
+    - wstool update
+  script:
+    - catkin_lint -W3 --ignore missing_directory .
+
+catkin_make:
+  stage: build
+  script:
+    - catkin_make
+
+catkin_make tests:
+  stage: test
+  script:
+    - catkin_make tests >/dev/null
+    - catkin_make run_tests
+    - catkin_test_results # Check if one of the tests failed!
+
+# Documentation
+pages:
+  stage: deploy
+  image: victorlamoine/ros_vtk8_sphinx_latexpdf:melodic
+  before_script:
+    - apt update && apt install -y -qq ccache
+    - git clone https://gitlab.com/VictorLamoine/ros_gitlab_ci.git
+    - source ros_gitlab_ci/gitlab-ci.bash >/dev/null
+  script:
+    - catkin_make --pkg ram_documentation
+    - mkdir -p $CI_PROJECT_DIR/public
+    - mv ./build/ros_additive_manufacturing/ram_documentation/html/* $CI_PROJECT_DIR/public
+    - mv ./build/ros_additive_manufacturing/ram_documentation/latex/ram_documentation.pdf $CI_PROJECT_DIR/public
+  artifacts:
+    paths:
+      - public/
+  only:
+    - melodic
+
+# Plain CMake
+YAML generators:
+  stage: build
+  before_script:
+    - apt update >/dev/null
+    - apt install -y libyaml-cpp-dev >/dev/null
+  script:
+    - cmake yaml_generators
+    - make -j2
+
