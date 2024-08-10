@@ -1,5 +1,5 @@
 # Hybrid Testbed for Image Segmentation Control
-
+# ROS Additive Manufacturing is forked from https://gitlab.com/InstitutMaupertuis/
 This repository contains a hybrid testbed project for image segmentation control, utilizing various tools and techniques for open loop control and ROS implementation.
 
 ## Project Structure
