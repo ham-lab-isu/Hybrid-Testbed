@@ -3,7 +3,6 @@ project(khi2cpp_hw)
 
 set(CMAKE_CXX_STANDARD 14)
 
-
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
@@ -13,6 +12,12 @@ set(HW_IF_INCLUDE_DEPENDS
   pluginlib
   rcpputils
   hardware_interface
+  urdf
+  builtin_interfaces
+  rosidl_default_generators
+  std_msgs
+  geometry_msgs
+  joint_limits
 )
 set(REF_GEN_INCLUDE_DEPENDS
   kdl_parser
@@ -28,9 +33,10 @@ set(CONTROLLER_INCLUDE_DEPENDS
 )
 
 # find dependencies
-find_package(controller_manager)
+find_package(controller_manager REQUIRED)
 find_package(backward_ros REQUIRED)
 find_package(ament_cmake REQUIRED)
+
 foreach(Dependency IN ITEMS ${HW_IF_INCLUDE_DEPENDS})
   find_package(${Dependency} REQUIRED)
 endforeach()
@@ -40,6 +46,8 @@ endforeach()
 foreach(Dependency IN ITEMS ${CONTROLLER_INCLUDE_DEPENDS})
   find_package(${Dependency} REQUIRED)
 endforeach()
+
+ament_export_dependencies(khi_robot_msgs)
 
 include_directories(
   include
@@ -61,7 +69,7 @@ endif()
 
 # add an executable, target the dependencies
 add_executable(main src/main.cpp)
-ament_target_dependencies(main PUBLIC ${REF_GEN_INCLUDE_DEPENDS})
+ament_target_dependencies(main PUBLIC ${HW_IF_INCLUDE_DEPENDS} ${CONTROLLER_INCLUDE_DEPENDS} ${REF_GEN_INCLUDE_DEPENDS})
 
 # add a library, target the dependencies
 add_library(
@@ -69,8 +77,45 @@ add_library(
   SHARED
   src/khi_hw_interface.cpp
   src/khi_cnt_interface.cpp
+  src/khi_krnx_driver.cpp
 )
 ament_target_dependencies(khi2cpp_hw PUBLIC ${HW_IF_INCLUDE_DEPENDS} ${CONTROLLER_INCLUDE_DEPENDS} ${REF_GEN_INCLUDE_DEPENDS})
+
+## KRNX
+message(STATUS "CMAKE_SYSTEM_NAME : ${CMAKE_SYSTEM_NAME}")
+message(STATUS "CMAKE_SYSTEM_PROCESSOR : ${CMAKE_SYSTEM_PROCESSOR}")
+message(STATUS "CMAKE_HOST_SYSTEM_NAME : ${CMAKE_HOST_SYSTEM_NAME}")
+message(STATUS "CMAKE_HOST_SYSTEM_PROCESSOR : ${CMAKE_HOST_SYSTEM_PROCESSOR}")
+message(STATUS "CMAKE_LIBRARY_ARCHITECTURE : ${CMAKE_LIBRARY_ARCHITECTURE}")
+if( ${CMAKE_LIBRARY_ARCHITECTURE} MATCHES ".*x86_64.*" )
+  set(krnx_arch x86_64)
+  message("Arch set as .*x86_64.*")
+elseif( ${CMAKE_LIBRARY_ARCHITECTURE} MATCHES ".*aarch64.*" )
+  set(krnx_arch aarch64)
+  message("Arch set as aarch64")
+elseif( ${CMAKE_LIBRARY_ARCHITECTURE} MATCHES ".*i386.*" )
+  set(krnx_arch i386)
+  message("Arch set as i386")
+elseif( ${CMAKE_LIBRARY_ARCHITECTURE} MATCHES ".*arm.*gnueabihf" )
+  set(krnx_arch armhf)
+  message("Arch set as armhf")
+elseif( ${CMAKE_LIBRARY_ARCHITECTURE} MATCHES ".*arm.*gnueabi" )
+  set(krnx_arch armel)
+  message("Arch set as armel")
+else()
+  message(WARNING "\nCould not detect system processor architecture: assuming 'x86_64'. This may result in non-working binaries.")
+  set(krnx_arch x86_64)
+endif()
+
+# This defines the library variable krnx_LIBRARIES which can then be called as ${krnx_LIBRARIES}
+find_library(krnx_LIBRARIES libkrnx.so PATHS ${PROJECT_SOURCE_DIR}/lib/${krnx_arch})
+message("Found the krnx library at ${krnx_LIBRARIES}")
+message(STATUS "Found KRNX library at: ${krnx_LIBRARIES}")
+
+install(FILES ${krnx_LIBRARIES}
+  DESTINATION ${PROJECT_SOURCE_DIR}/lib/)
+message("Installed the KRNX library: ${krnx_LIBRARIES}")
+
 
 target_compile_features(khi2cpp_hw PUBLIC cxx_std_17)
 target_include_directories(khi2cpp_hw PUBLIC
@@ -101,6 +146,8 @@ install(
     TARGETS main
     RUNTIME DESTINATION lib/khi2cpp_hw
 )
+
+target_link_libraries(main PUBLIC ${krnx_LIBRARIES})
 
 # Install the khi2cpp_hw library
 install(TARGETS khi2cpp_hw

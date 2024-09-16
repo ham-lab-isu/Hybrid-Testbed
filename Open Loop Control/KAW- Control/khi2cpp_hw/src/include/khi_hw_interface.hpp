@@ -25,6 +25,8 @@
 #include "hardware_interface/types/hardware_interface_return_values.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 
+#include "khi_krnx_driver.h"
+
 using hardware_interface::return_type;
 
 namespace khi2cpp_hw
@@ -55,8 +57,10 @@ protected:
 
   std::unordered_map<std::string, std::vector<std::string>> joint_interfaces = {
     {"position", {}}, {"velocity", {}}};
+
+  khi_robot_control::KhiRobotData data;
 };
 
-}  // namespace ros2_control_demo_example_7
+}  // namespace khi2cpp_hw
 
 #endif  // KHI_HW_INTERFACE_
